@@ -1,0 +1,30 @@
+export component Foo {
+    match (foo) {
+        one_case: Elem { }
+        another_case: Elem { }
+        else: Elem { }
+    }
+}
+
+export component Bar {
+    match foo {
+        one_case: Elem { }
+        another_case: Elem { }
+    }
+}
+
+export component Baz {
+    match foo {
+        one_case: Elem { }
+        another_case: Elem { }
+        else: Elem { }
+    }
+
+    property<int> xx;
+
+    match xx {
+        1: SubElem { }
+        2: SubElem { }
+        else: SubElem { }
+    }
+}

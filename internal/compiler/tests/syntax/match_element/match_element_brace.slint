@@ -1,0 +1,32 @@
+export component Foo {
+    match (foo) 
+        one_case: Elem { }
+//      >      <error{Expected '{' to start match cases}
+        another_case: Elem { }
+        else: Elem { }
+    }
+}
+
+export component Bar {
+    match foo 
+        one_case: Elem {}
+//      >      <error{Expected '{' to start match cases}
+    }
+}
+
+export component Baz {
+    match foo {
+        one_case: Elem { }
+        another_case: Elem { }
+        else: Elem { }
+    
+    property<int> xx;
+//  >      <error{Syntax error: expected '}'}
+}
+
+export component Qux {
+    match foo {
+        one_case: { Elem { } }
+//                ^error{Syntax error: expected Identifier}
+    }
+}

@@ -1,0 +1,24 @@
+export component Foo {
+    match foo {
+        one_case Elem { }
+//               >  <error{Syntax error: expected ':'}
+    }
+}
+
+export component Bar {
+    match foo {
+        one_case: Elem { }
+        another_case Elem { }
+//                   >  <error{Syntax error: expected ':'}
+    }
+}
+
+export component Baz {
+    match foo {
+        one_case: Elem { }
+        another_case: Elem { }
+        else Elem { }
+//           >  <error{Syntax error: expected ':'}
+    }
+}
+

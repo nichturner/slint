@@ -69,7 +69,10 @@ macro_rules! verify_node {
             }
         )*
     };
-
+    (@check_has_children $node:ident, + $kind:ident) => {
+        let count = $node.children_with_tokens().filter(|n| n.kind() == SyntaxKind::$kind).count();
+        assert!(count >= 1, "Expecting one or more sub-node of type {}, found {}\n{:?}", stringify!($kind), count, $node);
+    };
     // Any number of this kind.
     (@check_has_children $node:ident, * $kind:ident) => {};
     // 1 or 0
@@ -88,11 +91,13 @@ macro_rules! verify_node {
         assert_eq!(count, $count, "Expecting {} sub-node of type {}, found {}\n{:?}", $count, stringify!($kind), count, $node);
     };
 
+    (@extract_kind + $kind:ident) => { SyntaxKind::$kind};
     (@extract_kind * $kind:ident) => {SyntaxKind::$kind};
     (@extract_kind ? $kind:ident) => {SyntaxKind::$kind};
     (@extract_kind $count:literal $kind:ident) => {SyntaxKind::$kind};
     (@extract_kind $kind:ident) => {SyntaxKind::$kind};
 
+    (@extract_type + $kind:ident) => {$crate::parser::syntax_nodes::$kind};
     (@extract_type * $kind:ident) => {$crate::parser::syntax_nodes::$kind};
     (@extract_type ? $kind:ident) => {$crate::parser::syntax_nodes::$kind};
     (@extract_type $count:literal $kind:ident) => {$crate::parser::syntax_nodes::$kind};
@@ -104,7 +109,14 @@ macro_rules! node_accessors {
     ([ $($t1:tt $($t2:ident)?),* ]) => {
         $(node_accessors!{@ $t1 $($t2)*} )*
     };
-
+    (@ + $kind:ident) => {
+        #[allow(non_snake_case)]
+        pub fn $kind(&self) -> impl Iterator<Item = $kind> + use<> {
+            let mut it = self.0.children().filter(|n| n.kind() == SyntaxKind::$kind).map(Into::into).peekable();
+            debug_assert!(it.peek().is_some(), stringify!(Expected at least one $kind));
+            it
+        }
+    };
     (@ * $kind:ident) => {
         #[allow(non_snake_case)]
         pub fn $kind(&self) -> impl Iterator<Item = $kind> + use<> {
@@ -290,8 +302,8 @@ declare_syntax! {
         StringLiteral -> &crate::lexer::lex_string,
         NumberLiteral -> &crate::lexer::lex_number,
         ColorLiteral -> &crate::lexer::lex_color,
-        Identifier -> &crate::lexer::lex_identifier,
-        DoubleArrow -> "<=>",
+        Identifier -> &crate::lexer::lex_identifier, 
+        DoubleArrow -> "<=>", 
         PlusEqual -> "+=",
         MinusEqual -> "-=",
         StarEqual -> "*=",
@@ -338,12 +350,18 @@ declare_syntax! {
         /// `id := Element { ... }`
         SubElement -> [ Element ],
         Element -> [ ?QualifiedName, *PropertyDeclaration, *Binding, *CallbackConnection,
-                     *CallbackDeclaration, *ConditionalElement, *Function, *SubElement,
+                     *CallbackDeclaration, *ConditionalElement, *MatchElement, *Function, *SubElement,
                      *RepeatedElement, *PropertyAnimation, *PropertyChangedCallback,
                      *TwoWayBinding, *States, *Transitions, ?ChildrenPlaceholder ],
         RepeatedElement -> [ ?DeclaredIdentifier, ?RepeatedIndex, Expression , SubElement],
         RepeatedIndex -> [],
         ConditionalElement -> [ Expression , SubElement],
+        /// match (foo) { 1: Elem { } }
+        MatchElement -> [ Expression , *MatchCase, ?ElseMatchCase ],
+        /// 1: Elem { }
+        MatchCase -> [ Expression, SubElement ],
+        /// else: Elem { }
+        ElseMatchCase -> [ SubElement ],
         CallbackDeclaration -> [ DeclaredIdentifier, *CallbackDeclarationParameter, ?ReturnType, ?TwoWayBinding ],
         // `foo: type` or just `type`
         CallbackDeclarationParameter -> [ ?DeclaredIdentifier, Type],

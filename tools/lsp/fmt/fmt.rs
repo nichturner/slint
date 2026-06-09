@@ -1279,8 +1279,12 @@ fn format_match_case(
     writer: &mut impl TokenWriter,
     state: &mut FormatState,
 ) -> Result<(), std::io::Error> {
-    let mut sub = node.children_with_tokens();
+    let mut sub = node.children_with_tokens().peekable();
     whitespace_to(&mut sub, SyntaxKind::Expression, writer, state, "")?;
+    while sub.peek().map(|c| c.kind() == SyntaxKind::Pipe).unwrap_or(false) {
+        whitespace_to(&mut sub, SyntaxKind::Pipe, writer, state, " ")?;
+        whitespace_to(&mut sub, SyntaxKind::Expression, writer, state, " ")?;
+    }
     whitespace_to(&mut sub, SyntaxKind::Colon, writer, state, "")?;
     state.insert_whitespace(" ");
     state.skip_all_whitespace = true;

@@ -1,0 +1,56 @@
+// Copyright © 2026 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>, author Nicholas Turner <nicholas.turner@kdab.com>
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+
+export component Foo {
+    in-out property <int> foo;
+    match foo {
+        0 | 1: Rectangle { background: blue; }
+        else: Rectangle { background: blue; }
+    }
+}
+
+export component Foo {
+    in-out property <int> foo;
+    in-out property <int> foofoo: 2;
+    match foo {
+        10 | (100/2) | (foofoo - 2): Rectangle { background: blue; }
+        else: Rectangle { background: blue; }
+    }
+}
+
+
+export component Bar {
+    in-out property <int> foo;
+    match foo {
+        0 | : Rectangle { background: blue; }
+//          ^error{Expected expression for match case}
+        else: Rectangle { background: blue; }
+    }
+}
+
+export component Baz {
+    in-out property <int> foo;
+    match foo {
+        | 1: Rectangle { background: blue; }
+//      ^error{invalid expression}
+        else: Rectangle { background: blue; }
+    }
+}
+
+export component Qux {
+    in-out property <int> foo;
+    match foo {
+        0, 1: Rectangle { background: blue; }
+//       ^error{Expected ':' after match case expression}
+        else: Rectangle { background: blue; }
+    }
+}
+
+export component FooBar {
+    in-out property <int> foo;
+    match foo {
+        0 | 1 => Rectangle { background: blue; }
+//            ><error{Expected ':' after match case expression}
+        else: Rectangle { background: blue; }
+    }
+}

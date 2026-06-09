@@ -15,6 +15,7 @@ use super::r#type::parse_type;
 /// Item { property: value; SubElement { } }
 /// Item { if true: Rectangle {} }
 /// Item { match foo { 1: Rectangle {} } }
+/// Item { match foo { 1 | 2: Rectangle {} }}
 /// ```
 pub fn parse_element(p: &mut impl Parser) -> bool {
     let mut p = p.start_node(SyntaxKind::Element);
@@ -54,6 +55,7 @@ pub fn parse_element(p: &mut impl Parser) -> bool {
 /// changed foo => {}
 /// match (foo) { 1: Elem { } }
 /// match bar.property { 1: Elem { } }
+/// match foo { 1 | 2: Elem { } }
 /// ```
 pub fn parse_element_content(p: &mut impl Parser) {
     let mut had_parse_error = false;
@@ -231,6 +233,8 @@ fn parse_if_element(p: &mut impl Parser) {
 /// match (foo) { one_case: Elem { } }
 /// match foo { one_case: Elem { } another_case: Elem { } }
 /// match (foo) { one_case: Elem { } another_case: Elem { } else: Elem { } }
+/// match foo { one | other: Elem { } }
+/// match foo { 1 | 2: Elem { } else: Elem { } }
 /// ```
 fn parse_match_element(p: &mut impl Parser) {
     debug_assert_eq!(p.peek().as_str(), "match");
@@ -262,13 +266,22 @@ fn parse_match_element(p: &mut impl Parser) {
 /// ```test,MatchCase
 /// foo: Elem { }
 /// (foo): Elem { }
+/// foo | bar: Elem { }
+/// 1 | 2 | 3: Elem { }
 /// ```
 fn parse_match_case(p: &mut impl Parser) {
     let mut p = p.start_node(SyntaxKind::MatchCase);
-    parse_expression(&mut *p);
+    while p.peek().kind() != SyntaxKind::Colon {
+        parse_expression(&mut *p);
+        if !p.test(SyntaxKind::Pipe) {
+            break;
+        } else if p.peek().kind() == SyntaxKind::Colon {
+            p.error("Expected expression for match case");
+        }
+    }
     if !p.test(SyntaxKind::Colon) {
         p.error("Expected ':' after match case expression");
-        if p.peek().kind() != SyntaxKind::Identifier {
+        while p.peek().kind() != SyntaxKind::Identifier {
             p.consume();
         }
     }

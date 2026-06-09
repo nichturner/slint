@@ -2053,14 +2053,10 @@ impl Element {
             diag.push_error("match statements are an experimental feature".into(), &node);
         }
         let mut cases: Vec<ElementRc> = Vec::new();
-        let expr = node.Expression();
+        let match_item = node.Expression();
         for case in node.MatchCase() {
             let rei = RepeatedElementInfo {
-                model: Expression::BinaryExpression {
-                    lhs: (Box::new(Expression::Uncompiled(expr.clone().into()))),
-                    rhs: Box::new(Expression::Uncompiled(case.Expression().into())),
-                    op: '=',
-                },
+                model: Self::make_case_condition(&match_item, &case, '=', '|'),
                 model_data_id: SmolStr::default(),
                 index_id: SmolStr::default(),
                 is_conditional_element: true,
@@ -2079,19 +2075,11 @@ impl Element {
         }
         if let Some(else_case) = node.ElseMatchCase() {
             let case_exprs: Vec<_> = node.MatchCase().collect();
-            let mut condition = Expression::BinaryExpression {
-                lhs: Box::new(Expression::Uncompiled(expr.clone().into())),
-                rhs: Box::new(Expression::Uncompiled(case_exprs[0].Expression().into())),
-                op: '!',
-            };
+            let mut condition = Self::make_case_condition(&match_item, &case_exprs[0], '!', '&');
             for case in &case_exprs[1..] {
                 condition = Expression::BinaryExpression {
                     lhs: Box::new(condition),
-                    rhs: Box::new(Expression::BinaryExpression {
-                        lhs: Box::new(Expression::Uncompiled(expr.clone().into())),
-                        rhs: Box::new(Expression::Uncompiled(case.Expression().into())),
-                        op: '!',
-                    }),
+                    rhs: Box::new(Self::make_case_condition(&match_item, case, '!', '&')),
                     op: '&',
                 };
             }
@@ -2114,6 +2102,34 @@ impl Element {
             cases.push(e);
         }
         cases
+    }
+
+    // Match helper function to help generate proper conditions from expression nodes
+    fn make_case_condition(
+        match_item: &syntax_nodes::Expression,
+        case: &syntax_nodes::MatchCase,
+        op: char,
+        join_op: char,
+    ) -> Expression {
+        let mut exprs = case.Expression();
+        let first = exprs.next().unwrap();
+        let mut condition = Expression::BinaryExpression {
+            lhs: Box::new(Expression::Uncompiled(match_item.clone().into())),
+            rhs: Box::new(Expression::Uncompiled(first.into())),
+            op,
+        };
+        for expr in exprs {
+            condition = Expression::BinaryExpression {
+                lhs: Box::new(condition),
+                rhs: Box::new(Expression::BinaryExpression {
+                    lhs: Box::new(Expression::Uncompiled(match_item.clone().into())),
+                    rhs: Box::new(Expression::Uncompiled(expr.into())),
+                    op,
+                }),
+                op: join_op,
+            };
+        }
+        condition
     }
 
     /// Return the type of a property in this element or its base, along with the final name, in case

@@ -2055,23 +2055,25 @@ impl Element {
         let mut cases: Vec<ElementRc> = Vec::new();
         let match_item = node.Expression();
         for case in node.MatchCase() {
-            let rei = RepeatedElementInfo {
-                model: Self::make_case_condition(&match_item, &case, '=', '|'),
-                model_data_id: SmolStr::default(),
-                index_id: SmolStr::default(),
-                is_conditional_element: true,
-                is_listview: None,
-            };
-            let e: Rc<RefCell<Element>> = Element::from_sub_element_node(
-                case.SubElement(),
-                parent_type.clone(),
-                component_child_insertion_point,
-                is_in_legacy_component,
-                diag,
-                tr,
-            );
-            e.borrow_mut().repeated = Some(rei);
-            cases.push(e);
+            if let Some(sub_element) = case.SubElement() {
+                let rei = RepeatedElementInfo {
+                    model: Self::make_case_condition(&match_item, &case, '=', '|'),
+                    model_data_id: SmolStr::default(),
+                    index_id: SmolStr::default(),
+                    is_conditional_element: true,
+                    is_listview: None,
+                };
+                let e: Rc<RefCell<Element>> = Element::from_sub_element_node(
+                    sub_element,
+                    parent_type.clone(),
+                    component_child_insertion_point,
+                    is_in_legacy_component,
+                    diag,
+                    tr,
+                );
+                e.borrow_mut().repeated = Some(rei);
+                cases.push(e);
+            }
         }
         if let Some(else_case) = node.ElseMatchCase() {
             let case_exprs: Vec<_> = node.MatchCase().collect();

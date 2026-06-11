@@ -1289,10 +1289,14 @@ fn format_match_case(
     state.insert_whitespace(" ");
     state.skip_all_whitespace = true;
     for s in sub {
-        let put_newline_after = s.kind() == SyntaxKind::SubElement;
-        fold(s, writer, state)?;
-        if put_newline_after {
+        if s.kind() == SyntaxKind::SubElement {
+            fold(s, writer, state)?;
             state.new_line();
+        } else if s.as_token().map(|t| t.to_string() == "pass").unwrap_or(false) {
+            fold(s, writer, state)?;
+            state.skip_all_whitespace = true;
+        } else {
+            fold(s, writer, state)?;
         }
     }
     Ok(())

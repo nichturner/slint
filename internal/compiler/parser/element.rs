@@ -268,6 +268,7 @@ fn parse_match_element(p: &mut impl Parser) {
 /// (foo): Elem { }
 /// foo | bar: Elem { }
 /// 1 | 2 | 3: Elem { }
+/// foo: pass;
 /// ```
 fn parse_match_case(p: &mut impl Parser) {
     let mut p = p.start_node(SyntaxKind::MatchCase);
@@ -284,6 +285,11 @@ fn parse_match_case(p: &mut impl Parser) {
         while p.peek().kind() != SyntaxKind::Identifier {
             p.consume();
         }
+    }
+    if p.peek().as_str() == "pass" {
+        p.expect(SyntaxKind::Identifier);
+        p.expect(SyntaxKind::Semicolon);
+        return;
     }
     parse_sub_element(&mut *p);
 }
@@ -302,6 +308,13 @@ fn else_match_case(p: &mut impl Parser) {
             p.consume();
         }
     };
+    if p.peek().as_str() == "pass" {
+        p.error("Cannot use 'pass' in else case");
+        p.test(SyntaxKind::Identifier);
+        p.test(SyntaxKind::Semicolon);
+        drop(p.start_node(SyntaxKind::SubElement).start_node(SyntaxKind::Element));
+        return;
+    }
     parse_sub_element(&mut *p);
 }
 
